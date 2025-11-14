@@ -1,0 +1,172 @@
+_schema-version: 3.3.0
+ID: Hospitalmangement
+description: A simple CAP project.
+version: 1.0.0
+modules:
+- name: Hospitalmangement-srv
+  type: nodejs
+  path: gen/srv
+  requires:
+  - name: Hospitalmangement-auth
+  - name: Hospitalmangement-db
+  - name: Hospitalmangement-connectivity
+  - name: Hospitalmangement-destination
+  provides:
+  - name: srv-api
+    properties:
+      srv-url: ${default-url}
+  parameters:
+    buildpack: nodejs_buildpack
+    instances: 1
+  build-parameters:
+    builder: npm-ci
+- name: Hospitalmangement-db-deployer
+  type: hdb
+  path: gen/db
+  requires:
+  - name: Hospitalmangement-db
+  parameters:
+    buildpack: nodejs_buildpack
+- name: Hospitalmangement
+  type: approuter.nodejs
+  path: app/router
+  requires:
+  - name: srv-api
+    group: destinations
+    properties:
+      forwardAuthToken: true
+      name: srv-api
+      url: ~{srv-url}
+  - name: Hospitalmangement-auth
+  - name: Hospitalmangement-destination
+  - name: Hospitalmangement-html5-runtime
+  provides:
+  - name: app-api
+    properties:
+      app-protocol: ${protocol}
+      app-uri: ${default-uri}
+  parameters:
+    disk-quota: 256M
+    keep-existing-routes: true
+    memory: 256M
+- name: Hospitalmangement-app-deployer
+  type: com.sap.application.content
+  path: gen
+  requires:
+  - name: Hospitalmangement-auth
+  - name: srv-api
+  - name: Hospitalmangement-html5-repo-host
+    parameters:
+      config:
+        HTML5Runtime_enabled: true
+      content-target: true
+  build-parameters:
+    build-result: app/
+    requires:
+    - artifacts:
+      - admin-books.zip
+      name: Hospitalmangementadminbooks
+      target-path: app/
+    - artifacts:
+      - browse.zip
+      name: Hospitalmangementbrowse
+      target-path: app/
+    - artifacts:
+      - hospitalview.zip
+      name: hospitalview
+      target-path: app/
+- name: Hospitalmangementadminbooks
+  type: html5
+  path: app/admin-books
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm ci
+    - npm run build
+    supported-platforms: []
+- name: Hospitalmangementbrowse
+  type: html5
+  path: app/browse
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm ci
+    - npm run build
+    supported-platforms: []
+- name: hospitalview
+  type: html5
+  path: app/hospitalview
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+resources:
+- name: Hospitalmangement-auth
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      oauth2-configuration:
+        redirect-uris:
+        - https://*~{app-api/app-uri}/**
+      role-collections:
+      - description: generated
+        name: admin (Hospitalmangement ${org}-${space})
+        role-template-references:
+        - $XSAPPNAME.admin
+      tenant-mode: dedicated
+      xsappname: Hospitalmangement-${org}-${space}
+    path: ./xs-security.json
+    service: xsuaa
+    service-plan: application
+  requires:
+  - name: app-api
+- name: Hospitalmangement-db
+  type: com.sap.xs.hdi-container
+  parameters:
+    service: hana
+    service-plan: hdi-shared
+- name: Hospitalmangement-connectivity
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: connectivity
+    service-plan: lite
+- name: Hospitalmangement-destination
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      HTML5Runtime_enabled: false
+      init_data:
+        instance:
+          destinations:
+          - Authentication: NoAuthentication
+            Name: ui5
+            ProxyType: Internet
+            Type: HTTP
+            URL: https://ui5.sap.com
+          existing_destinations_policy: update
+    service: destination
+    service-plan: lite
+- name: Hospitalmangement-html5-repo-host
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-plan: app-host
+- name: Hospitalmangement-html5-runtime
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-plan: app-runtime
+parameters:
+  deploy_mode: html5-repo
+  enable-parallel-deployments: true
+build-parameters:
+  before-all:
+  - builder: custom
+    commands:
+    - npm ci
+    - npx cds build --production --ws-pack
