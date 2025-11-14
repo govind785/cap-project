@@ -1,0 +1,191 @@
+{
+	"_version": "1.76.0",
+	"sap.app": {
+		"id": "hospitalview",
+		"type": "application",
+		"i18n": {
+			"bundleUrl": "i18n/i18n.properties",
+			"supportedLocales": [
+				""
+			]
+		},
+		"applicationVersion": {
+			"version": "0.0.1"
+		},
+		"title": "{{appTitle}}",
+		"description": "{{appDescription}}",
+		"dataSources": {
+			"mainService": {
+				"uri": "/odata/v4/hospital/",
+				"type": "OData",
+				"settings": {
+					"odataVersion": "4.0"
+				}
+			}
+		}
+	},
+	"sap.ui": {
+		"technology": "UI5",
+		"deviceTypes": {
+			"desktop": true,
+			"tablet": true,
+			"phone": true
+		}
+	},
+	"sap.ui5": {
+		"flexEnabled": true,
+		"dependencies": {
+			"minUI5Version": "1.142.0",
+			"libs": {
+				"sap.m": {},
+				"sap.ui.core": {},
+				"sap.fe.templates": {}
+			}
+		},
+		"models": {
+			"i18n": {
+				"type": "sap.ui.model.resource.ResourceModel",
+				"settings": {
+					"bundleName": "hospitalview.i18n.i18n",
+					"supportedLocales": [
+						""
+					]
+				}
+			},
+			"": {
+				"dataSource": "mainService",
+				"preload": true,
+				"settings": {
+					"operationMode": "Server",
+					"autoExpandSelect": true,
+					"earlyRequests": true
+				}
+			}
+		},
+		"routing": {
+			"config": {
+				"routerClass": "sap.f.routing.Router",
+				"type": "View",
+				"viewType": "XML",
+				"async": true
+			},
+			"routes": [
+				{
+					"pattern": ":?query:",
+					"name": "HospitalsList",
+					"target": "HospitalsList"
+				},
+				{
+					"pattern": "Hospitals({key}):?query:",
+					"name": "HospitalsObjectPage",
+					"target": "HospitalsObjectPage"
+				},
+				{
+					"pattern": "Hospitals({key})/departments({key2}):?query:",
+					"name": "DepartmentsObjectPage",
+					"target": "DepartmentsObjectPage"
+				}
+			],
+			"targets": {
+				"HospitalsList": {
+					"type": "Component",
+					"id": "HospitalsList",
+					"name": "sap.fe.templates.ListReport",
+					"options": {
+						"settings": {
+							"contextPath": "/Hospitals",
+							"variantManagement": "Page",
+							"navigation": {
+								"Hospitals": {
+									"detail": {
+										"route": "HospitalsObjectPage"
+									}
+								}
+							},
+							"controlConfiguration": {
+								"@com.sap.vocabularies.UI.v1.LineItem": {
+									"actions": {
+										"ListCustomAction": {
+											"press": "hospitalview.custom.ListController.onCustomButtonPress",
+											"visible": true,
+											"enabled": true,
+											"text": "Custom List Button"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"HospitalsObjectPage": {
+					"type": "Component",
+					"id": "HospitalsObjectPage",
+					"name": "sap.fe.templates.ObjectPage",
+					"options": {
+						"settings": {
+							"contextPath": "/Hospitals",
+							"navigation": {
+								"departments": {
+									"detail": {
+										"route": "DepartmentsObjectPage"
+									}
+								}
+							},
+							"controlConfiguration": {
+								"departments/@com.sap.vocabularies.UI.v1.LineItem": {
+									"actions": {
+										"AddEmployeeAction": {
+											"id": "addEmployeeBtn",
+											"text": "show card",
+											"press": "hospitalview.custom.showcard.onCustomButtonPress",
+											"requiresSelection": false,
+											"enabled": true
+										}
+									}
+								}
+							},
+							"content": {
+								"header": {
+									"actions": {
+										"HospitalCustomAction": {
+											"press": "hospitalview.ext.HospitalController.onCustomButtonPress",
+											"visible": true,
+											"enabled": true,
+											"text": "Hospital Btn"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"DepartmentsObjectPage": {
+					"type": "Component",
+					"id": "DepartmentsObjectPage",
+					"name": "sap.fe.templates.ObjectPage",
+					"options": {
+						"settings": {
+							"contextPath": "/Departments",
+							"content": {
+								"header": {
+									"actions": {
+										"DepartmentCustomAction": {
+											"press": "hospitalview.ext.DepartmentController.onCustomButtonPress",
+											"visible": true,
+											"enabled": true,
+											"text": "Department Button"
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"flexBundle": false
+	},
+	"sap.fiori": {
+		"archeType": "transactional"
+	}
+}
